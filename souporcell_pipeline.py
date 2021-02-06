@@ -538,7 +538,7 @@ def vartrix(args, final_vcf, final_bam):
     with open(args.out_dir + "/vartrix.err", 'w') as err:
         with open(args.out_dir + "/vartrix.out", 'w') as out:
             cmd = ["vartrix", "--mapq", "30", "-b", final_bam, "-c", barcodes, "--scoring-method", "coverage", "--threads", str(args.threads),
-                "--ref-matrix", ref_mtx, "--out-matrix", alt_mtx, "-v", final_vcf, "--fasta", args.fasta]
+                   "--ref-matrix", ref_mtx, "--out-matrix", alt_mtx, "-v", final_vcf, "--fasta", args.fasta, "--out-variants", args.out_dir + "/out-variants.txt"]
             if not(args.no_umi) and args.umi_tag == "UB":
                 cmd.append("--umi")
             subprocess.check_call(cmd, stdout = out, stderr = err)
