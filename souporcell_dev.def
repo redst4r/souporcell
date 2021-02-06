@@ -1,0 +1,23 @@
+Bootstrap: localimage
+From: /home/michi/ms_python_packages/souporcell/souporcell_baseimage.sif
+
+%setup
+	# cp -r /home/michi/ms_python_packages/souporcell /tmp
+	rsync -av /home/michi/ms_python_packages/souporcell /tmp --exclude souporcell_baseimage.sif --exclude sp.sif
+
+%environment
+	PATH=/opt/bedtools2/bin:/usr/local/envs/py36/bin:/opt/souporcell:/opt/souporcell/troublet/target/release:/usr/local/condabin:/opt/minimap2-2.7:/root/.cargo/bin:/opt/vartrix-v1.1.3-x86_64-linux/:/opt:$PATH
+
+%post -c /bin/bash
+
+CARGO_HOME=/opt/.cargo RUSTUP_HOME=/opt/.cargo bash -c 'curl https://sh.rustup.rs -sSf | sh -s -- -y'
+source /opt/.cargo/env
+which cargo
+
+cp -r /tmp/souporcell /opt
+cd /opt
+# # git clone https://github.com/wheaton5/souporcell.git
+cd souporcell/troublet
+cargo build --release
+cd /opt/souporcell/souporcell
+cargo build --release
