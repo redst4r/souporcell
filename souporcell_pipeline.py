@@ -108,6 +108,38 @@ if not args.ignore:
 print("checking fasta")
 fasta = pyfaidx.Fasta(args.fasta, key_function = lambda key: key.split()[0])
 
+
+# a = {'1': 10000, '2': 40000, '3': 100}
+def chunk_chromosomes(length_dict, n_chunks_per_chrom):
+    """
+    splits each chromosome into n_chunks
+    """
+    # total_reference_length = sum(length_dict.values())
+    # step_length = int(math.ceil(total_reference_length/n_chunks))
+    regions = []
+
+    for chrom, chrom_len in length_dict.items():
+        # chunksize = int(chrom_len / n_chunks_per_chrom)
+        chunksize = math.ceil(chrom_len / n_chunks_per_chrom)
+        starts = list(range(0,chrom_len, chunksize))
+        r = []
+        for s in starts:
+            end = min(s + chunksize, chrom_len)
+            r.append((chrom, s, end))
+
+        # just malke sure the last interval covers the end
+        r[-1] = (r[-1][0], r[-1][1], chrom_len)
+        regions.extend(r)
+
+    regions_per_threads = [[] for _ in range(n_chunks_per_chrom)]
+    import itertools
+    thread_iter = itertools.cycle(range(n_chunks_per_chrom))
+    for thread_id, the_region in zip(thread_iter, regions):
+        regions_per_threads[thread_id].append(the_region)
+    return regions_per_threads
+
+
+
 def get_fasta_regions(fastaname, threads):
     fasta = pyfaidx.Fasta(args.fasta, key_function = lambda key: key.split()[0])
     total_reference_length = 0
@@ -141,7 +173,10 @@ def get_fasta_regions(fastaname, threads):
         else:
             regions.append(region)
     return regions
-
+"""
+bamname = '/home/michi/mounts/TB4drive/ISB_data/201015_NS500720_0063_AHV53GBGXG/cellranger_quant/04_multi_GE/outs/possorted_genome_bam.bam'
+get_bam_regions(bamname, threads=4)
+"""
 
 def get_bam_regions(bamname, threads):
     bam = pysam.AlignmentFile(bamname)
@@ -208,13 +243,12 @@ def make_fastqs(args):
                 block = True
             if not block:
                 sub_index = len(region_fastqs[index])
-                chrom = region[sub_index][0]
-                start = region[sub_index][1]
-                end = region[sub_index][2]
+                chrom, start, end = region[sub_index]
+
                 fq_name = args.out_dir + "/souporcell_fastq_" + str(index) + "_" + str(sub_index) + ".fq"
                 directory = os.path.dirname(os.path.realpath(__file__))
                 p = subprocess.Popen([directory+"/renamer.py", "--bam", args.bam, "--barcodes", args.barcodes, "--out", fq_name,
-                        "--chrom", chrom, "--start", str(start), "--end", str(end), "--no_umi", str(args.no_umi), 
+                        "--chrom", chrom, "--start", str(start), "--end", str(end), "--no_umi", str(args.no_umi),
                         "--umi_tag", args.umi_tag, "--cell_tag", args.cell_tag])
                 all_fastqs.append(fq_name)
                 procs[index] = p
@@ -434,19 +468,17 @@ def freebayes(args, bam, fasta):
                 block = True
             if not block:
                 sub_index = len(region_vcfs[index])
-                chrom = region[sub_index][0]
-                start = region[sub_index][1]
-                end = region[sub_index][2]
+                chrom, start, end = region[sub_index]
                 vcf_name = args.out_dir + "/souporcell_" + str(index) + "_" + str(sub_index) + ".vcf"
                 filehandle = open(vcf_name, 'w')
                 filehandles.append(filehandle)
                 errhandle = open(vcf_name + ".err", 'w')
                 errhandles.append(errhandle)
-                    
+
                 cmd = ["freebayes", "-f", args.fasta, "-iXu", "-C", "2",
-                    "-q", "20", "-n", "3", "-E", "1", "-m", "30", 
+                    "-q", "20", "-n", "3", "-E", "1", "-m", "30",
                     "--min-coverage", str(int(args.min_alt)+int(args.min_ref)), "--pooled-continuous", "--skip-coverage", "100000"]
-                
+
                 cmd.extend(["-r", chrom + ":" + str(start) + "-" + str(end)])
                 print(" ".join(cmd))
                 cmd.append(bam)
