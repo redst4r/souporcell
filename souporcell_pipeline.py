@@ -139,8 +139,7 @@ def chunk_chromosomes(length_dict, n_chunks_per_chrom):
     return regions_per_threads
 
 
-
-def get_fasta_regions(fastaname, threads):
+def get_fasta_regions_old(fastaname, threads):
     fasta = pyfaidx.Fasta(args.fasta, key_function = lambda key: key.split()[0])
     total_reference_length = 0
     for chrom in sorted(fasta.keys()):
@@ -173,12 +172,30 @@ def get_fasta_regions(fastaname, threads):
         else:
             regions.append(region)
     return regions
+
+
+def get_fasta_regions(fastaname, threads):
+    fasta = pyfaidx.Fasta(args.fasta, key_function=lambda key: key.split()[0])
+    length_dict = {
+        chrom: len(fasta[chrom]) for chrom in sorted(fasta.keys()) if len(fasta[chrom]) > 250000
+        }
+    regions = chunk_chromosomes(length_dict, threads)
+    return regions
+
 """
 bamname = '/home/michi/mounts/TB4drive/ISB_data/201015_NS500720_0063_AHV53GBGXG/cellranger_quant/04_multi_GE/outs/possorted_genome_bam.bam'
 get_bam_regions(bamname, threads=4)
 """
-
 def get_bam_regions(bamname, threads):
+    bam = pysam.AlignmentFile(bamname)
+    length_dict = {
+        chrom: bam.get_reference_length(chrom) for chrom in bam.references
+    }
+    regions = chunk_chromosomes(length_dict, threads)
+    return regions
+
+
+def get_bam_regions_old(bamname, threads):
     bam = pysam.AlignmentFile(bamname)
     total_reference_length = 0
     for chrom in bam.references:
@@ -192,7 +209,7 @@ def get_bam_regions(bamname, threads):
         chrom_length = bam.get_reference_length(chrom)
         #print(chrom+" size "+str(chrom_length)+" and step size "+str(step_length))
         while True:
-            #print("\tregion so far "+str(region_so_far)+" chrom so far "+str(chrom_so_far)) 
+            #print("\tregion so far "+str(region_so_far)+" chrom so far "+str(chrom_so_far))
             #print("\t"+str(chrom_length - chrom_so_far)+" <= "+str(step_length - region_so_far))
             #print("\t"+str((chrom_length - chrom_so_far) <= step_length - region_so_far))
             if (chrom_length - chrom_so_far) <= step_length - region_so_far:
