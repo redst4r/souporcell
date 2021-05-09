@@ -1,9 +1,9 @@
 Bootstrap: localimage
-From: /home/michi/ms_python_packages/souporcell/souporcell_baseimage.sif
+From: /home/mstrasse/TB4/souporcell/souporcell_baseimage.sif
 
 %setup
 	# cp -r /home/michi/ms_python_packages/souporcell /tmp
-	rsync -av /home/michi/ms_python_packages/souporcell /tmp --exclude souporcell_baseimage.sif --exclude sp.sif
+	rsync -av /home/mstrasse/TB4/souporcell /tmp --exclude souporcell_baseimage.sif --exclude sp.sif
 
 %environment
 	PATH=/opt/bedtools2/bin:/usr/local/envs/py36/bin:/opt/souporcell:/opt/souporcell/troublet/target/release:/usr/local/condabin:/opt/minimap2-2.7:/root/.cargo/bin:/opt/vartrix-v1.1.3-x86_64-linux/:/opt:$PATH
